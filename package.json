@@ -1,0 +1,28 @@
+{
+  "name": "typegrad",
+  "version": "0.0.1",
+  "description": "Autograd engine written in TypeScript",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node ./src/index.ts",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HardenedHunter/typegrad.git"
+  },
+  "author": "HardenedHunter",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/HardenedHunter/typegrad/issues"
+  },
+  "homepage": "https://github.com/HardenedHunter/typegrad#readme",
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.6.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
