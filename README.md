@@ -1,4 +1,4 @@
-# autograd-ts
+# typegrad
 
 ## What is this?
 
