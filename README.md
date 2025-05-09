@@ -2,40 +2,40 @@
 
 ## What is this?
 
-A simple deep learning library with React-powered UI for debugging.
+A deep learning library with an autograd engine. Written fully in TypeScript!
 
 ## What is the goal of this project?
 
 - better understand how autograd engines work under the hood
 - better understand [tinygrad](https://github.com/tinygrad/tinygrad)'s ShapeTracker, laziness and movement ops
 - build something that works and can be used for training and inference
+- implement models from common papers, including vision and language models
 
 ## How do we get there? Definition-of-Done for MVP:
 
-- create an autograd engine (based on Karpathy's [micrograd](https://github.com/karpathy/micrograd))
-- create a simple Tensor library with PyTorch/tinygrad/..-like frontend
-- implement basic operations, like `.dot(...)` and others
-- get reasonable results for MNIST with both training and inference (e. g. the model actually converges to sub-90% on test set)
-- visualize everything when core primitives are ready
-- ..and do all of the above in TypeScript because we like to suffer
+- [x] create a simple Tensor library with PyTorch/tinygrad/..-like frontend
+- [x] implement basic unary, binary and movement ops, then implement `.dot(...)` and other high-level functions
+- [ ] create an autograd engine (based on Karpathy's [micrograd](https://github.com/karpathy/micrograd))
+- [ ] get reasonable results for MNIST with both training and inference (e. g. the model actually trains and converges to sub-90% accuracy on test set)
+
+..and do all of the above in TypeScript because we like to suffer
 
 ## If we succeed, try to do the following
 
-- implement all movement ops (reshape, expand, shrink, permute, flip)
-- support for Conv2D (should be easy when movement ops are ready)
+- add support for Conv2D (shouldn't be that hard when other basic ops are ready)
 - tune for performance
-- maybe add support for fast backends (Metal API?)
+- maybe add support for fast backends (Metal API? C/C++ modules in Node?)
 - loader for ONNX models
 
 ## Why TypeScript?
 
-It would be pretty straightforward to do this with Python or C++. Hovewer, there are countless projects built with those languages to express the same idea/solve the same set of problems. To put it simply, we will try to push TypeScript to it's limit and see what we can do.
+It would be pretty straightforward to do this in Python or C++. Hovewer, there are countless projects built with those languages to express the same idea/solve the same set of problems. To put it simply, we will try to push TypeScript to it's limit and see what we can do.
 
-Pretty much the only major downside of TS for this particular project is lack of first-class support for operator overloading:
+Pretty much the only major downside of TS for this particular project is lack of operator overloading:
 
 ```ts
-const a = new Tensor([1, 2, 3]);
-const b = new Tensor([4, 5, 6]);
+const a = Tensor.from([1, 2, 3]);
+const b = Tensor.from([4, 5, 6]);
 const c = a + b; // Sadly, we can't do that
 const c1 = a.add(b); // ..but we can do this
 const c2 = add(a, b); // ..or this
