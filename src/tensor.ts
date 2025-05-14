@@ -1,7 +1,7 @@
 import { duration } from "./debug";
 import { flatten, NDArray, prod } from "./helpers";
 import { View } from "./view";
-import { Op, AddOp, ExpandOp, MulOp, PermuteOp, ReshapeOp, SumOp } from "./ops";
+import { Op, Add, Expand, Mul, Permute, Reshape, Sum, ReLU, Sign, Log, Neg, Reciprocal, Exp, Sub } from "./ops";
 
 export class Tensor {
   public readonly data: Float32Array;
@@ -9,7 +9,7 @@ export class Tensor {
   public grad?: Tensor;
   public op?: Op;
 
-  private constructor(data: Float32Array, view: View, op?: Op, grad?: Tensor) {
+  public constructor(data: Float32Array, view: View, op?: Op, grad?: Tensor) {
     this.data = data;
     this.view = view;
     this.op = op;
@@ -21,7 +21,7 @@ export class Tensor {
   }
 
   @duration()
-  public static rand(...shape: number[]) {
+  public static rand(shape: number[]) {
     const size = prod(shape);
     const data = new Float32Array(size);
 
@@ -80,7 +80,6 @@ export class Tensor {
     this.data[index] = value;
   }
 
-  @duration()
   public permute(order: number[], requiresGrad = true) {
     const view = this.view.permute(order);
 
@@ -89,13 +88,12 @@ export class Tensor {
     const result = new Tensor(this.data, view);
 
     if (requiresGrad) {
-      result.op = new PermuteOp(this, order);
+      result.op = new Permute(this, order);
     }
 
     return result;
   }
 
-  @duration()
   public reshape(newShape: number[], requiresGrad = true) {
     const view = this.view.reshape(newShape);
 
@@ -104,13 +102,12 @@ export class Tensor {
     const result = new Tensor(this.data, view);
 
     if (requiresGrad) {
-      result.op = new ReshapeOp(this);
+      result.op = new Reshape(this);
     }
 
     return result;
   }
 
-  @duration()
   public expand(newShape: number[], requiresGrad = true) {
     const view = this.view.expand(newShape);
 
@@ -119,13 +116,12 @@ export class Tensor {
     const result = new Tensor(this.data, view);
 
     if (requiresGrad) {
-      result.op = new ExpandOp(this);
+      result.op = new Expand(this);
     }
 
     return result;
   }
 
-  @duration()
   public transpose(dim0 = 1, dim1 = 0, requiresGrad = true) {
     dim0 = dim0 < 0 ? this.ndim + dim0 : dim0;
     dim1 = dim1 < 0 ? this.ndim + dim1 : dim1;
@@ -155,7 +151,7 @@ export class Tensor {
 
     const shape = aShapeAligned.map((ai, i) => Math.max(ai, bShapeAligned[i]));
 
-    return [a.expand(shape), b.expand(shape)];
+    return [a.reshape(aShapeAligned).expand(shape), b.reshape(bShapeAligned).expand(shape)];
   }
 
   @duration()
@@ -187,7 +183,7 @@ export class Tensor {
     }
 
     if (requiresGrad) {
-      result.op = new MulOp(a, b);
+      result.op = new Mul(a, b);
     }
 
     return result;
@@ -204,10 +200,32 @@ export class Tensor {
     }
 
     if (requiresGrad) {
-      result.op = new AddOp(a, b);
+      result.op = new Add(a, b);
     }
 
     return result;
+  }
+
+  @duration()
+  public sub(tensor: Tensor, requiresGrad = true) {
+    const [a, b] = Tensor.broadcasted(this, tensor);
+
+    const result = a.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, a.get(indices) - b.get(indices));
+    }
+
+    if (requiresGrad) {
+      result.op = new Sub(a, b);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public div(tensor: Tensor, requiresGrad = true) {
+    return this.mul(tensor.reciprocal(requiresGrad), requiresGrad);
   }
 
   @duration()
@@ -239,7 +257,122 @@ export class Tensor {
     }
 
     if (requiresGrad) {
-      result.op = new SumOp(this, axis, keepDim);
+      result.op = new Sum(this, axis, keepDim);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public sign(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      const value = this.get(indices);
+
+      result.set(indices, value > 0 ? 1 : value < 0 ? -1 : 0);
+    }
+
+    if (requiresGrad) {
+      result.op = new Sign(this);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public relu(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      const value = this.get(indices);
+
+      result.set(indices, value > 0 ? value : 0);
+    }
+
+    if (requiresGrad) {
+      result.op = new ReLU(this);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public log(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, Math.log(this.get(indices)));
+    }
+
+    if (requiresGrad) {
+      result.op = new Log(this);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public exp(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, Math.exp(this.get(indices)));
+    }
+
+    if (requiresGrad) {
+      result.op = new Exp(this, result);
+    }
+
+    return result;
+  }
+
+  private softmaxParts(requiresGrad = true) {
+    const e = this.exp(requiresGrad);
+    const sum = e.sum(-1, requiresGrad, true);
+
+    return [e, sum];
+  }
+
+  @duration()
+  public softmax(requiresGrad = true) {
+    const [e, sum] = this.softmaxParts(requiresGrad);
+
+    return e.div(sum, requiresGrad);
+  }
+
+  @duration()
+  public logSoftmax(requiresGrad = true) {
+    const [_, sum] = this.softmaxParts(requiresGrad);
+
+    return this.sub(sum.log(requiresGrad), requiresGrad);
+  }
+
+  @duration()
+  public reciprocal(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, 1 / this.get(indices));
+    }
+
+    if (requiresGrad) {
+      result.op = new Reciprocal(this, result);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public neg(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, -this.get(indices));
+    }
+
+    if (requiresGrad) {
+      result.op = new Neg(this);
     }
 
     return result;

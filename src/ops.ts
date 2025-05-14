@@ -8,7 +8,7 @@ export type Op = {
 
 /* Binary ops */
 
-export class AddOp implements Op {
+export class Add implements Op {
   inputs: [Tensor, Tensor];
 
   public constructor(x: Tensor, y: Tensor) {
@@ -20,7 +20,19 @@ export class AddOp implements Op {
   }
 }
 
-export class MulOp implements Op {
+export class Sub implements Op {
+  inputs: [Tensor, Tensor];
+
+  public constructor(x: Tensor, y: Tensor) {
+    this.inputs = [x, y];
+  }
+
+  public backward(resultGrad: Tensor) {
+    return [resultGrad, resultGrad.neg(false)];
+  }
+}
+
+export class Mul implements Op {
   inputs: [Tensor, Tensor];
 
   public constructor(x: Tensor, y: Tensor) {
@@ -34,9 +46,91 @@ export class MulOp implements Op {
   }
 }
 
+/* Unary ops */
+
+export class Sign implements Op {
+  inputs: [Tensor];
+
+  public constructor(x: Tensor) {
+    this.inputs = [x];
+  }
+
+  public backward(resultGrad: Tensor) {
+    return [resultGrad.zerosLike()];
+  }
+}
+
+export class ReLU implements Op {
+  inputs: [Tensor];
+
+  public constructor(x: Tensor) {
+    this.inputs = [x];
+  }
+
+  public backward(resultGrad: Tensor) {
+    const [x] = this.inputs;
+
+    return [x.sign(false).relu(false).mul(resultGrad, false)];
+  }
+}
+
+export class Log implements Op {
+  inputs: [Tensor];
+
+  public constructor(x: Tensor) {
+    this.inputs = [x];
+  }
+
+  public backward(resultGrad: Tensor) {
+    const [x] = this.inputs;
+
+    return [x.reciprocal(false).mul(resultGrad, false)];
+  }
+}
+
+export class Exp implements Op {
+  inputs: [Tensor];
+  result: Tensor;
+
+  public constructor(x: Tensor, result: Tensor) {
+    this.inputs = [x];
+    this.result = result;
+  }
+
+  public backward(resultGrad: Tensor) {
+    return [this.result.mul(resultGrad, false)];
+  }
+}
+
+export class Reciprocal implements Op {
+  inputs: [Tensor];
+  result: Tensor;
+
+  public constructor(x: Tensor, result: Tensor) {
+    this.inputs = [x];
+    this.result = result;
+  }
+
+  public backward(resultGrad: Tensor) {
+    return [resultGrad.neg(false).mul(this.result, false).mul(this.result, false)];
+  }
+}
+
+export class Neg implements Op {
+  inputs: [Tensor];
+
+  public constructor(x: Tensor) {
+    this.inputs = [x];
+  }
+
+  public backward(resultGrad: Tensor) {
+    return [Tensor.full(resultGrad.shape, -1).mul(resultGrad, false)];
+  }
+}
+
 /* Movement ops */
 
-export class ReshapeOp implements Op {
+export class Reshape implements Op {
   inputs: [Tensor];
 
   public constructor(x: Tensor) {
@@ -50,7 +144,7 @@ export class ReshapeOp implements Op {
   }
 }
 
-export class PermuteOp implements Op {
+export class Permute implements Op {
   inputs: [Tensor];
   order: number[];
 
@@ -64,7 +158,7 @@ export class PermuteOp implements Op {
   }
 }
 
-export class ExpandOp implements Op {
+export class Expand implements Op {
   inputs: [Tensor];
 
   public constructor(x: Tensor) {
@@ -83,7 +177,7 @@ export class ExpandOp implements Op {
 
 /* Reduce ops */
 
-export class SumOp implements Op {
+export class Sum implements Op {
   inputs: [Tensor];
   axis: number;
   keepDim: boolean;
