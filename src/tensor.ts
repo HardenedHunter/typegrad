@@ -1,5 +1,5 @@
 import { duration } from "./debug";
-import { flatten, NDArray, prod } from "./helpers";
+import { equal, flatten, NDArray, prod } from "./helpers";
 import { View } from "./view";
 import { Op, Add, Expand, Mul, Permute, Reshape, Sum, ReLU, Sign, Log, Neg, Reciprocal, Exp, Sub } from "./ops";
 
@@ -378,17 +378,19 @@ export class Tensor {
     return result;
   }
 
-  public backward() {
-    if (!this.grad) this.grad = this.onesLike();
+  public backward(grad?: Tensor) {
+    grad = grad ?? this.onesLike();
+
+    if (!equal(grad.shape, this.shape))
+      throw new Error(`[Tensor.backward] backward grad has invalid shape: ${this.shape} !== ${grad.shape}`);
+
+    this.grad = this.grad ? this.grad.add(grad, false) : grad;
 
     if (!this.op) return;
 
-    const grads = this.op.backward(this.grad);
+    const inputGrads = this.op.backward(grad);
 
-    this.op.inputs.forEach((input, i) => {
-      input.grad = input.grad ? input.grad.add(grads[i], false) : grads[i];
-      input.backward();
-    });
+    this.op.inputs.forEach((input, i) => input.backward(inputGrads[i]));
   }
 
   public render() {
