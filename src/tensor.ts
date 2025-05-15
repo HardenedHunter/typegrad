@@ -60,6 +60,10 @@ export class Tensor {
     return this.view.shape;
   }
 
+  public numel() {
+    return prod(this.shape);
+  }
+
   public indices() {
     return this.view.indices();
   }
@@ -78,6 +82,12 @@ export class Tensor {
     const index = indices.reduce((acc, index, i) => acc + index * this.view.strides[i], 0);
 
     this.data[index] = value;
+  }
+
+  public item() {
+    if (this.numel() !== 1) throw new Error(`[Tensor.item] tensor has shape ${this.shape}`);
+
+    return this.data[0];
   }
 
   public permute(order: number[], requiresGrad = true) {
@@ -349,6 +359,11 @@ export class Tensor {
   }
 
   @duration()
+  public sigmoid(requiresGrad = true) {
+    return this.neg(requiresGrad).exp(requiresGrad).add(this.onesLike(), requiresGrad).reciprocal(requiresGrad);
+  }
+
+  @duration()
   public reciprocal(requiresGrad = true) {
     const result = this.zerosLike();
 
@@ -378,6 +393,26 @@ export class Tensor {
     return result;
   }
 
+  private toposort() {
+    const visit = (node: Tensor, visited: Set<Tensor>, sorted: Tensor[]) => {
+      visited.add(node);
+
+      if (node.op) {
+        node.op.inputs.forEach(input => {
+          if (!visited.has(input)) {
+            visit(input, visited, sorted);
+          }
+        })
+      }
+
+      sorted.push(node);
+
+      return sorted;
+    }
+
+    return visit(this, new Set(), []);
+  }
+
   public backward(grad?: Tensor) {
     grad = grad ?? this.onesLike();
 
@@ -385,12 +420,18 @@ export class Tensor {
       throw new Error(`[Tensor.backward] backward grad has invalid shape: ${this.shape} !== ${grad.shape}`);
 
     this.grad = this.grad ? this.grad.add(grad, false) : grad;
+    
+    const sortedGraph = this.toposort();
 
-    if (!this.op) return;
+    sortedGraph.reverse().forEach(node => {
+      if (!node.op) return;
 
-    const inputGrads = this.op.backward(grad);
+      const inputGrads = node.op.backward(node.grad!);
 
-    this.op.inputs.forEach((input, i) => input.backward(inputGrads[i]));
+      node.op.inputs.forEach((input, i) => {
+        input.grad = input.grad ? input.grad.add(inputGrads[i], false) : inputGrads[i];
+      })
+    });
   }
 
   public render() {
