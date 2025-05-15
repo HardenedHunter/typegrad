@@ -13,10 +13,12 @@ A deep learning library with an autograd engine. Written fully in TypeScript!
 
 ## How do we get there? Definition-of-Done for MVP:
 
+### MVP is DONE!
+
 - [x] create a simple Tensor library with PyTorch/tinygrad/..-like frontend
 - [x] implement basic unary, binary and movement ops, then implement `.dot(...)` and other high-level functions
-- [ ] create an autograd engine (based on Karpathy's [micrograd](https://github.com/karpathy/micrograd))
-- [ ] get reasonable results for MNIST with both training and inference (e. g. the model actually trains and converges to sub-90% accuracy on test set)
+- [x] create an autograd engine (based on Karpathy's [micrograd](https://github.com/karpathy/micrograd))
+- [x] get reasonable results for MNIST with both training and inference (e. g. the model actually trains and converges to sub-90% accuracy on test set)
 
 ..and do all of the above in TypeScript because we like to suffer
 

@@ -165,7 +165,7 @@ export class Tensor {
   }
 
   @duration()
-  public dot(tensor: Tensor) {
+  public dot(tensor: Tensor, requiresGrad = true) {
     let a: Tensor = this,
       b = tensor;
 
@@ -176,10 +176,10 @@ export class Tensor {
 
     const filler = a.ndim < 2 || b.ndim < 2 ? [] : [1];
 
-    a = a.reshape([...a.shape.slice(0, aAxis), ...filler, ...a.shape.slice(aAxis)]);
-    b = b.reshape([...b.shape.slice(0, bAxis), ...filler, ...b.shape.slice(bAxis)]).transpose(-1, bAxis);
+    a = a.reshape([...a.shape.slice(0, aAxis), ...filler, ...a.shape.slice(aAxis)], requiresGrad);
+    b = b.reshape([...b.shape.slice(0, bAxis), ...filler, ...b.shape.slice(bAxis)], requiresGrad).transpose(-1, bAxis, requiresGrad);
 
-    return a.mul(b).sum(-1);
+    return a.mul(b, requiresGrad).sum(-1, requiresGrad);
   }
 
   @duration()
