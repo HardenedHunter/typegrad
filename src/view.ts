@@ -69,13 +69,6 @@ export class View {
     if (!this.shape.every((s, i) => s === newShape[i] || s === 1))
       throw new Error(`[View.expand] shape values mismatch, can't expand ${this.shape} -> ${newShape}`);
 
-    const countOfExpandingDims = this.shape.reduce((acc, s, i) => s === 1 && newShape[i] !== 1 ? acc + 1 : acc, 0);
-
-    // TODO $multi-axis-sum$
-    if (countOfExpandingDims > 1) {
-      throw new Error(`[View.expand] currently only 1 dim can be expanded, can't expand ${this.shape} -> ${newShape}`);
-    }
-
     return new View(newShape, this.strides);
   }
 

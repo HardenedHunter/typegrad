@@ -183,7 +183,9 @@ export class Tensor {
   }
 
   @duration()
-  public mul(tensor: Tensor, requiresGrad = true) {
+  public mul(value: Tensor | number, requiresGrad = true) {
+    const tensor = typeof value === "number" ? Tensor.from([value]) : value;
+
     const [a, b] = Tensor.broadcasted(this, tensor);
 
     const result = a.zerosLike();
@@ -200,7 +202,9 @@ export class Tensor {
   }
 
   @duration()
-  public add(tensor: Tensor, requiresGrad = true) {
+  public add(value: Tensor | number, requiresGrad = true) {
+    const tensor = typeof value === "number" ? Tensor.from([value]) : value;
+
     const [a, b] = Tensor.broadcasted(this, tensor);
 
     const result = a.zerosLike();
@@ -217,7 +221,9 @@ export class Tensor {
   }
 
   @duration()
-  public sub(tensor: Tensor, requiresGrad = true) {
+  public sub(value: Tensor | number, requiresGrad = true) {
+    const tensor = typeof value === "number" ? Tensor.from([value]) : value;
+
     const [a, b] = Tensor.broadcasted(this, tensor);
 
     const result = a.zerosLike();
@@ -234,7 +240,9 @@ export class Tensor {
   }
 
   @duration()
-  public div(tensor: Tensor, requiresGrad = true) {
+  public div(value: Tensor | number, requiresGrad = true) {
+    const tensor = typeof value === "number" ? Tensor.from([value]) : value;
+
     return this.mul(tensor.reciprocal(requiresGrad), requiresGrad);
   }
 
@@ -398,17 +406,17 @@ export class Tensor {
       visited.add(node);
 
       if (node.op) {
-        node.op.inputs.forEach(input => {
+        node.op.inputs.forEach((input) => {
           if (!visited.has(input)) {
             visit(input, visited, sorted);
           }
-        })
+        });
       }
 
       sorted.push(node);
 
       return sorted;
-    }
+    };
 
     return visit(this, new Set(), []);
   }
@@ -420,17 +428,17 @@ export class Tensor {
       throw new Error(`[Tensor.backward] backward grad has invalid shape: ${this.shape} !== ${grad.shape}`);
 
     this.grad = this.grad ? this.grad.add(grad, false) : grad;
-    
+
     const sortedGraph = this.toposort();
 
-    sortedGraph.reverse().forEach(node => {
+    sortedGraph.reverse().forEach((node) => {
       if (!node.op) return;
 
       const inputGrads = node.op.backward(node.grad!);
 
       node.op.inputs.forEach((input, i) => {
         input.grad = input.grad ? input.grad.add(inputGrads[i], false) : inputGrads[i];
-      })
+      });
     });
   }
 

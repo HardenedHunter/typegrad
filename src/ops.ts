@@ -168,7 +168,15 @@ export class Expand implements Op {
   public backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
+    const countOfExpandingDims = x.shape.reduce((acc, s, i) => (s === 1 && resultGrad.shape[i] !== 1 ? acc + 1 : acc), 0);
+
     // TODO $multi-axis-sum$
+    if (countOfExpandingDims > 1) {
+      throw new Error(
+        `[Expand.backward] can't do backward when expanding >1 dim at a time as sum currently doesn't support multiple axes, expanding ${x.shape} -> ${resultGrad.shape}`
+      );
+    }
+
     const sumAxis = x.shape.findIndex((value, i) => value === 1 && resultGrad.shape[i] !== 1);
 
     return [resultGrad.sum(sumAxis, false, true)];
