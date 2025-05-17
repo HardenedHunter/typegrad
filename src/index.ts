@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import { View } from "./view";
 import { Tensor } from "./tensor";
+import { random } from "./random";
+
+random.seed(0);
 
 const trainImages = fs.readFileSync("datasets/mnist/train-images-idx3-ubyte").subarray(0x10);
 const trainLabels = fs.readFileSync("datasets/mnist/train-labels-idx1-ubyte").subarray(8);
@@ -27,24 +30,22 @@ for (let i = 0; i < trainLabels.length; i++) {
   yTrain.push(Tensor.from(oneHot(trainLabels[i], 10)));
 }
 
-const lr = 0.1;
-
 class Model {
-  w1 = Tensor.zeros([784, 10]);
-  b1 = Tensor.zeros([10]);
+  w1 = Tensor.kaimingNormal([784, 32]);
+  w2 = Tensor.kaimingNormal([32, 10]);
 
   forward(x: Tensor) {
-    return x.dot(this.w1).add(this.b1).logSoftmax();
+    return x.dot(this.w1).relu().dot(this.w2).logSoftmax();
   }
 
-  step() {
-    this.w1 = this.w1.sub(this.w1.grad!.mul(lr, false), false);
-    this.b1 = this.b1.sub(this.b1.grad!.mul(lr, false), false);
+  step(learningRate: number) {
+    this.w1 = this.w1.sub(this.w1.grad!.mul(learningRate, false), false);
+    this.w2 = this.w2.sub(this.w2.grad!.mul(learningRate, false), false);
   }
 
   zeroGrad() {
     this.w1.grad = undefined;
-    this.b1.grad = undefined;
+    this.w2.grad = undefined;
   }
 }
 
@@ -52,20 +53,27 @@ const model = new Model();
 
 const trainSize = 2000;
 const testSize = 200;
+const batchSize = 32;
 
 const train = (epoch: number) => {
   let correct = 0;
 
+  model.zeroGrad();
+
   for (let i = 0; i < trainSize; i++) {
-    model.zeroGrad();
-    
     const X = xTrain[i],
       y = yTrain[i];
     const pred = model.forward(X);
     const loss = crossEntropyLoss(y, pred);
-    
+
     loss.backward();
-    model.step();
+
+    const endOfBatch = (i + 1) % batchSize === 0 || i === trainSize - 1;
+
+    if (endOfBatch) {
+      model.step(0.1 / batchSize);
+      model.zeroGrad();
+    }
 
     correct += pred.data.indexOf(Math.max(...pred.data)) === y.data.indexOf(1) ? 1 : 0;
   }
@@ -80,7 +88,7 @@ const test = (epoch: number) => {
     const X = xTrain[i],
       y = yTrain[i];
     const pred = model.forward(X);
-    
+
     correct += pred.data.indexOf(Math.max(...pred.data)) === y.data.indexOf(1) ? 1 : 0;
   }
 

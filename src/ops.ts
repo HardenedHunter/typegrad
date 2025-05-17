@@ -74,6 +74,34 @@ export class ReLU implements Op {
   }
 }
 
+export class Sqrt implements Op {
+  inputs: [Tensor];
+  result: Tensor;
+
+  public constructor(x: Tensor, result: Tensor) {
+    this.inputs = [x];
+    this.result = result;
+  }
+
+  public backward(resultGrad: Tensor) {
+    return [this.result.mul(2, false).reciprocal(false).mul(resultGrad, false)];
+  }
+}
+
+export class Sin implements Op {
+  inputs: [Tensor];
+
+  public constructor(x: Tensor) {
+    this.inputs = [x];
+  }
+
+  public backward(resultGrad: Tensor) {
+    const [x] = this.inputs;
+
+    return [x.cos(false).mul(resultGrad, false)];
+  }
+}
+
 export class Log implements Op {
   inputs: [Tensor];
 

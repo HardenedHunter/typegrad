@@ -1,7 +1,8 @@
 import { duration } from "./debug";
 import { equal, flatten, NDArray, prod } from "./helpers";
 import { View } from "./view";
-import { Op, Add, Expand, Mul, Permute, Reshape, Sum, ReLU, Sign, Log, Neg, Reciprocal, Exp, Sub } from "./ops";
+import { Op, Add, Expand, Mul, Permute, Reshape, Sum, ReLU, Sign, Log, Neg, Reciprocal, Exp, Sub, Sin, Sqrt } from "./ops";
+import { random } from "./random";
 
 export class Tensor {
   public readonly data: Float32Array;
@@ -25,9 +26,42 @@ export class Tensor {
     const size = prod(shape);
     const data = new Float32Array(size);
 
-    for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < size; i++) data[i] = random.randomFloat();
 
     return new Tensor(data, new View(shape));
+  }
+
+  @duration()
+  public static randn(shape: number[]) {
+    const u1 = Tensor.rand(shape);
+    const u2 = Tensor.rand(shape);
+
+    // From https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+    return u1.log(false).mul(-2, false).sqrt(false).mul(u2.mul(Math.PI * 2, false).cos(false), false);
+  }
+
+  @duration()
+  public static normal(shape: number[], mean = 0, std = 1) {
+    return Tensor.randn(shape).mul(std, false).add(mean, false);
+  }
+  
+  @duration()
+  public static uniform(shape: number[], low = 0, high = 1) {
+    return Tensor.rand(shape).mul(high - low, false);
+  }
+  
+  @duration()
+  public static kaimingUniform(shape: number[], a = 0.01) {
+    const bound = Math.sqrt(3) * Math.sqrt(2 / (1 + a ** 2)) / Math.sqrt(prod(shape.slice(1)))
+    
+    return Tensor.uniform(shape, -bound, bound);
+  }
+
+  @duration()
+  public static kaimingNormal(shape: number[], a = 0.01) {
+    const std = Math.sqrt(2 / (1 + a ** 2)) / Math.sqrt(prod(shape.slice(1)))
+    
+    return Tensor.normal(shape, 0, std);
   }
 
   @duration()
@@ -313,6 +347,41 @@ export class Tensor {
     }
 
     return result;
+  }
+
+  @duration()
+  public sqrt(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, Math.sqrt(this.get(indices)));
+    }
+
+    if (requiresGrad) {
+      result.op = new Sqrt(this, result);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public sin(requiresGrad = true) {
+    const result = this.zerosLike();
+
+    for (let indices of result.indices()) {
+      result.set(indices, Math.sin(this.get(indices)));
+    }
+
+    if (requiresGrad) {
+      result.op = new Sin(this);
+    }
+
+    return result;
+  }
+
+  @duration()
+  public cos(requiresGrad = true) {
+    return Tensor.full(this.shape, Math.PI / 2).sub(this, requiresGrad).sin(requiresGrad);
   }
 
   @duration()
