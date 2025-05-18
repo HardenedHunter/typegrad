@@ -31,16 +31,23 @@ for (let i = 0; i < trainLabels.length; i++) {
 }
 
 class Model {
-  w1 = Tensor.kaimingNormal([784, 32]);
-  w2 = Tensor.kaimingNormal([32, 10]);
+  w1: Tensor;
+  w2: Tensor;
+
+  constructor() {
+    this.w1 = Tensor.kaimingNormal([784, 32], undefined, true);
+    this.w2 = Tensor.kaimingNormal([32, 10], undefined, true);
+  }
 
   forward(x: Tensor) {
     return x.dot(this.w1).relu().dot(this.w2).logSoftmax();
   }
 
   step(learningRate: number) {
-    this.w1 = this.w1.sub(this.w1.grad!.mul(learningRate, false), false);
-    this.w2 = this.w2.sub(this.w2.grad!.mul(learningRate, false), false);
+    this.w1 = this.w1.detach().sub(this.w1.grad!.mul(learningRate));
+    this.w2 = this.w2.detach().sub(this.w2.grad!.mul(learningRate));
+    this.w1.requiresGrad = true;
+    this.w2.requiresGrad = true;
   }
 
   zeroGrad() {
@@ -54,6 +61,8 @@ const model = new Model();
 const trainSize = 2000;
 const testSize = 200;
 const batchSize = 32;
+const learningRate = 0.1;
+const epochs = 10;
 
 const train = (epoch: number) => {
   let correct = 0;
@@ -71,7 +80,7 @@ const train = (epoch: number) => {
     const endOfBatch = (i + 1) % batchSize === 0 || i === trainSize - 1;
 
     if (endOfBatch) {
-      model.step(0.1 / batchSize);
+      model.step(learningRate / batchSize);
       model.zeroGrad();
     }
 
@@ -95,7 +104,7 @@ const test = (epoch: number) => {
   console.log(`Test Epoch ${epoch} ${((correct / testSize) * 100).toFixed(2)}%`);
 };
 
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < epochs; i++) {
   train(i + 1);
   test(i + 1);
 }

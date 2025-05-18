@@ -5,12 +5,12 @@ describe("add", () => {
     const a = Tensor.from([
       [1, 2, 3],
       [5, 7, 11],
-    ]);
+    ], true);
 
     const b = Tensor.from([
       [13, 17, 19],
       [23, 29, 31],
-    ]);
+    ], true);
 
     const expected = Tensor.from([
       [14, 19, 22],
@@ -31,12 +31,12 @@ describe("mul", () => {
     const a = Tensor.from([
       [1, 2, 3],
       [5, 7, 11],
-    ]);
+    ], true);
 
     const b = Tensor.from([
       [13, 17, 19],
       [23, 29, 31],
-    ]);
+    ], true);
 
     const expected = Tensor.from([
       [13, 34, 57],
@@ -57,7 +57,7 @@ describe("reshape", () => {
     const a = Tensor.from([
       [1, 2, 3, 5],
       [7, 11, 13, 17],
-    ]);
+    ], true);
 
     const expected = Tensor.from([
       [
@@ -83,7 +83,7 @@ describe("permute", () => {
     const a = Tensor.from([
       [1, 2, 3, 5],
       [7, 11, 13, 17],
-    ]);
+    ], true);
 
     const expected = Tensor.from([
       [1, 7],
@@ -102,7 +102,7 @@ describe("permute", () => {
 
 describe("expand", () => {
   test("forward and backward", () => {
-    const a = Tensor.from([[[1, 2, 3, 5]], [[7, 11, 13, 17]]]);
+    const a = Tensor.from([[[1, 2, 3, 5]], [[7, 11, 13, 17]]], true);
 
     const expected = Tensor.from([
       [
@@ -139,7 +139,7 @@ describe("sum", () => {
       [95, 259, 583],
       [115, 287, 649],
     ],
-  ]);
+  ], true);
 
   test("forward and backward, keepDim=false", () => {
     const a = getInput();
@@ -149,7 +149,7 @@ describe("sum", () => {
       [741, 819, 937, 1051],
     ]);
 
-    const result = a.sum(-1, undefined, false);
+    const result = a.sum(-1, false);
     expect(result.render()).toEqual(expected.render());
 
     result.backward();
@@ -164,7 +164,7 @@ describe("sum", () => {
       [[741], [819], [937], [1051]],
     ]);
 
-    const result = a.sum(-1, undefined, true);
+    const result = a.sum(-1, true);
     expect(result.render()).toEqual(expected.render());
 
     result.backward();
@@ -177,13 +177,13 @@ describe("dot", () => {
     const a = Tensor.from([
       [1, 2, 3],
       [5, 7, 11],
-    ]);
+    ], true);
 
     const b = Tensor.from([
       [13, 17, 19, 23],
       [29, 31, 37, 41],
       [43, 47, 53, 59],
-    ]);
+    ], true);
 
     const expected = Tensor.from([
       [200, 220, 252, 282],

@@ -11,11 +11,11 @@ export type Op = {
 export class Add implements Op {
   inputs: [Tensor, Tensor];
 
-  public constructor(x: Tensor, y: Tensor) {
+  constructor(x: Tensor, y: Tensor) {
     this.inputs = [x, y];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     return [resultGrad, resultGrad];
   }
 }
@@ -23,26 +23,26 @@ export class Add implements Op {
 export class Sub implements Op {
   inputs: [Tensor, Tensor];
 
-  public constructor(x: Tensor, y: Tensor) {
+  constructor(x: Tensor, y: Tensor) {
     this.inputs = [x, y];
   }
 
-  public backward(resultGrad: Tensor) {
-    return [resultGrad, resultGrad.neg(false)];
+  backward(resultGrad: Tensor) {
+    return [resultGrad, resultGrad.neg()];
   }
 }
 
 export class Mul implements Op {
   inputs: [Tensor, Tensor];
 
-  public constructor(x: Tensor, y: Tensor) {
+  constructor(x: Tensor, y: Tensor) {
     this.inputs = [x, y];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x, y] = this.inputs;
 
-    return [y.mul(resultGrad, false), x.mul(resultGrad, false)];
+    return [y.detach().mul(resultGrad), x.detach().mul(resultGrad)];
   }
 }
 
@@ -51,11 +51,11 @@ export class Mul implements Op {
 export class Sign implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     return [resultGrad.zerosLike()];
   }
 }
@@ -63,14 +63,14 @@ export class Sign implements Op {
 export class ReLU implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
-    return [x.sign(false).relu(false).mul(resultGrad, false)];
+    return [x.detach().sign().relu().mul(resultGrad)];
   }
 }
 
@@ -78,41 +78,41 @@ export class Sqrt implements Op {
   inputs: [Tensor];
   result: Tensor;
 
-  public constructor(x: Tensor, result: Tensor) {
+  constructor(x: Tensor, result: Tensor) {
     this.inputs = [x];
     this.result = result;
   }
 
-  public backward(resultGrad: Tensor) {
-    return [this.result.mul(2, false).reciprocal(false).mul(resultGrad, false)];
+  backward(resultGrad: Tensor) {
+    return [this.result.detach().mul(2).reciprocal().mul(resultGrad)];
   }
 }
 
 export class Sin implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
-    return [x.cos(false).mul(resultGrad, false)];
+    return [x.detach().cos().mul(resultGrad)];
   }
 }
 
 export class Log implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
-    return [x.reciprocal(false).mul(resultGrad, false)];
+    return [x.detach().reciprocal().mul(resultGrad)];
   }
 }
 
@@ -120,13 +120,13 @@ export class Exp implements Op {
   inputs: [Tensor];
   result: Tensor;
 
-  public constructor(x: Tensor, result: Tensor) {
+  constructor(x: Tensor, result: Tensor) {
     this.inputs = [x];
     this.result = result;
   }
 
-  public backward(resultGrad: Tensor) {
-    return [this.result.mul(resultGrad, false)];
+  backward(resultGrad: Tensor) {
+    return [this.result.detach().mul(resultGrad)];
   }
 }
 
@@ -134,25 +134,25 @@ export class Reciprocal implements Op {
   inputs: [Tensor];
   result: Tensor;
 
-  public constructor(x: Tensor, result: Tensor) {
+  constructor(x: Tensor, result: Tensor) {
     this.inputs = [x];
     this.result = result;
   }
 
-  public backward(resultGrad: Tensor) {
-    return [resultGrad.neg(false).mul(this.result, false).mul(this.result, false)];
+  backward(resultGrad: Tensor) {
+    return [resultGrad.neg().mul(this.result.detach()).mul(this.result.detach())];
   }
 }
 
 export class Neg implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
-    return [Tensor.full(resultGrad.shape, -1).mul(resultGrad, false)];
+  backward(resultGrad: Tensor) {
+    return [Tensor.full(resultGrad.shape, -1).mul(resultGrad)];
   }
 }
 
@@ -161,14 +161,14 @@ export class Neg implements Op {
 export class Reshape implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
-    return [resultGrad.reshape(x.shape, false)];
+    return [resultGrad.reshape(x.shape)];
   }
 }
 
@@ -176,24 +176,24 @@ export class Permute implements Op {
   inputs: [Tensor];
   order: number[];
 
-  public constructor(x: Tensor, order: number[]) {
+  constructor(x: Tensor, order: number[]) {
     this.inputs = [x];
     this.order = order;
   }
 
-  public backward(resultGrad: Tensor) {
-    return [resultGrad.permute(argsort(this.order), false)];
+  backward(resultGrad: Tensor) {
+    return [resultGrad.permute(argsort(this.order))];
   }
 }
 
 export class Expand implements Op {
   inputs: [Tensor];
 
-  public constructor(x: Tensor) {
+  constructor(x: Tensor) {
     this.inputs = [x];
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
     const countOfExpandingDims = x.shape.reduce((acc, s, i) => (s === 1 && resultGrad.shape[i] !== 1 ? acc + 1 : acc), 0);
@@ -207,7 +207,7 @@ export class Expand implements Op {
 
     const sumAxis = x.shape.findIndex((value, i) => value === 1 && resultGrad.shape[i] !== 1);
 
-    return [resultGrad.sum(sumAxis, false, true)];
+    return [resultGrad.sum(sumAxis, true)];
   }
 }
 
@@ -218,13 +218,13 @@ export class Sum implements Op {
   axis: number;
   keepDim: boolean;
 
-  public constructor(x: Tensor, axis: number, keepDim: boolean) {
+  constructor(x: Tensor, axis: number, keepDim: boolean) {
     this.inputs = [x];
     this.axis = axis;
     this.keepDim = keepDim;
   }
 
-  public backward(resultGrad: Tensor) {
+  backward(resultGrad: Tensor) {
     const [x] = this.inputs;
 
     const shapeToExpandFrom = [...resultGrad.shape];
@@ -235,6 +235,6 @@ export class Sum implements Op {
       shapeToExpandFrom.splice(this.axis, 0, 1);
     }
 
-    return [resultGrad.reshape(shapeToExpandFrom, false).expand(x.shape, false)];
+    return [resultGrad.reshape(shapeToExpandFrom).expand(x.shape)];
   }
 }
