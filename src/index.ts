@@ -19,8 +19,6 @@ const oneHot = (label: number, classes: number) => {
   return result;
 };
 
-const crossEntropyLoss = (label: Tensor, logOfPredicted: Tensor) => label.mul(logOfPredicted).sum(0).neg();
-
 for (let i = 0; i < trainImages.length; i += 784) {
   const x = new Tensor(new Float32Array([...trainImages.subarray(i, i + 784)].map((value) => value / 255)), new View([784]));
   xTrain.push(x);
@@ -40,7 +38,7 @@ class Model {
   }
 
   forward(x: Tensor) {
-    return x.dot(this.w1).relu().dot(this.w2).logSoftmax();
+    return x.dot(this.w1).relu().dot(this.w2);
   }
 
   step(learningRate: number) {
@@ -73,7 +71,7 @@ const train = (epoch: number) => {
     const X = xTrain[i],
       y = yTrain[i];
     const pred = model.forward(X);
-    const loss = crossEntropyLoss(y, pred);
+    const loss = pred.categoricalCrossEntropy(y);
 
     loss.backward();
 

@@ -462,6 +462,16 @@ export class Tensor {
   }
 
   @duration()
+  crossEntropy(labels: Tensor) {
+    return labels.mul(this.log()).sum(0).neg();
+  }
+
+  @duration()
+  categoricalCrossEntropy(labels: Tensor) {
+    return labels.mul(this.logSoftmax()).sum(0).neg();
+  }
+
+  @duration()
   sigmoid() {
     return this.neg().exp().add(this.onesLike()).reciprocal();
   }
